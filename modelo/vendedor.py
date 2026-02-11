@@ -1,16 +1,16 @@
 class Vendedor(Persona):
-    def __init__(self, carnet, direcion):
-        self.carnet = carnet
-        self.direcion = direcion
+    def __init__(self, Carnet, Direcion):
+        self.Carnet = Carnet
+        self.Direcion = Direcion
 
     def getCarnet(self):
-        return self.carnet
+        return self.Carnet
 
-    def setCarnet(self, carnet):
-        self.carnet = carnet
+    def setCarnet(self, Carnet):
+        self.Carnet = Carnet
 
     def getDirecion(self):
-        return self.direcion
+        return self.Direcion
 
-    def setDirecion(self, direcion):
-        self.direcion = direcion
+    def setDirecion(self, Direcion):
+        self.Direcion = Direcion
