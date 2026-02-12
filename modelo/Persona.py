@@ -4,6 +4,7 @@ class Persona():
         self.Email = Email
         self.Nombre = Nombre
         self.Telefono = Telefono
+        self.Facturas = []
 
     def getCodigo(self):
         return self.Codigo
