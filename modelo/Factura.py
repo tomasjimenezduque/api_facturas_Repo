@@ -7,7 +7,7 @@ class Factura():
         self.Fecha = Fecha
         self.Numero = Numero
         self.Total = Total
-        self.productos: List[ProductosPorFactura] = []              #Relación de Composición
+        self.productos: List[ProductosPorFactura] = []              # type: ignore #Relación de Composición
 
     def getFecha(self): 
         return self.Fecha

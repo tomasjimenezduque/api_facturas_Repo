@@ -1,3 +1,6 @@
+from api_facturas.modelo import Cliente
+
+
 class Empresa(Cliente):
     def __init__(self, Codigo, Nombre):
         self.Codigo = Codigo
