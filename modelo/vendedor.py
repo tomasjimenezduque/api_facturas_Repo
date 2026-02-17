@@ -1,3 +1,4 @@
+from api_facturas.modelo import Persona
 class Vendedor(Persona):
     def __init__(self, Carnet, Direcion):
         self.Carnet = Carnet
