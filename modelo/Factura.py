@@ -1,13 +1,12 @@
 from typing import List
-from api_facturas.modelo import ProductosPorFactura
-
+from ProductosPorFactura import ProductosPorFactura
 
 class Factura():
-    def __init__(self,Fecha,Numero,Total):
+    def __init__(self, Fecha, Numero, Total):
         self.Fecha = Fecha
         self.Numero = Numero
         self.Total = Total
-        self.productos: List[ProductosPorFactura] = []              # type: ignore #Relación de Composición
+        self.productos: List[ProductosPorFactura] = []
 
     def getFecha(self): 
         return self.Fecha
@@ -27,7 +26,5 @@ class Factura():
     def setTotal(self, Total):
         self.Total = Total
 
-    #Métodos
-
-    def agregar_producto(self, producto_factura: ProductosPorFactura) -> None:      #Agrega un producto a la factura
+    def agregar_producto(self, producto_factura: ProductosPorFactura) -> None:
         self.productos.append(producto_factura)

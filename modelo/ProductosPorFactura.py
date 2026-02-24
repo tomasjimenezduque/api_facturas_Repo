@@ -1,5 +1,5 @@
 class ProductosPorFactura():
-    def __init__(self,Cantidad,Subtotal,producto=None):      #None representa la Relación (0,1) con Producto
+    def __init__(self, Cantidad, Subtotal, producto=None):
         self.Cantidad = Cantidad
         self.Subtotal = Subtotal
         self.producto = producto        

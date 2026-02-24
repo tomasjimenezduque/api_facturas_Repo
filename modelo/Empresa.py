@@ -1,8 +1,9 @@
-from api_facturas.modelo import Cliente
-
+from Cliente import Cliente
 
 class Empresa(Cliente):
-    def __init__(self, Codigo, Nombre):
+    def __init__(self, Codigo_Pers, Email, Nombre_Pers, Telefono, Credito, Codigo, Nombre):
+        # Se pasa la info al constructor de Cliente
+        super().__init__(Codigo_Pers, Email, Nombre_Pers, Telefono, Credito)
         self.Codigo = Codigo
         self.Nombre = Nombre
 

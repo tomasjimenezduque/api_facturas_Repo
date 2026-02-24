@@ -29,5 +29,3 @@ class Persona():
 
     def setTelefono(self, Telefono):
         self.Telefono = Telefono
-
-        

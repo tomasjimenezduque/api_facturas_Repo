@@ -1,6 +1,8 @@
-from api_facturas.modelo import Persona
+from Persona import Persona
+
 class Vendedor(Persona):
-    def __init__(self, Carnet, Direcion):
+    def __init__(self, Codigo, Email, Nombre, Telefono, Carnet, Direcion):
+        super().__init__(Codigo, Email, Nombre, Telefono)
         self.Carnet = Carnet
         self.Direcion = Direcion
 
