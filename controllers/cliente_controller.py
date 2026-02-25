@@ -12,7 +12,7 @@ Endpoints:
 from fastapi import APIRouter, HTTPException, Query, Response
 
 from models.cliente import Cliente
-from servicios.fabrica_repositorios import crear_servicio_crud
+from servicios.fabrica_repositorios import crear_servicio_cliente
 
 
 router = APIRouter(prefix="/api/cliente", tags=["Cliente"])
@@ -29,8 +29,8 @@ async def listar_clientes(
 ):
     """Lista todos los clientes."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.listar("cliente", esquema, limite)
+        servicio = crear_servicio_cliente()
+        filas = await servicio.listar(esquema, limite)
 
         if len(filas) == 0:
             return Response(status_code=204)
@@ -62,8 +62,8 @@ async def obtener_cliente(
 ):
     """Obtiene un cliente por su id."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.obtener_por_clave("cliente", "id", str(id), esquema)
+        servicio = crear_servicio_cliente()
+        filas = await servicio.obtener_por_id(id, esquema)
 
         if len(filas) == 0:
             raise HTTPException(status_code=404, detail={
@@ -97,8 +97,8 @@ async def crear_cliente(
     """Crea un nuevo cliente. Valida con el modelo Pydantic."""
     try:
         datos = cliente.model_dump(exclude_none=True)
-        servicio = crear_servicio_crud()
-        creado = await servicio.crear("cliente", datos, esquema)
+        servicio = crear_servicio_cliente()
+        creado = await servicio.crear(datos, esquema)
 
         if creado:
             return {
@@ -136,8 +136,8 @@ async def actualizar_cliente(
     """Actualiza un cliente existente."""
     try:
         datos = cliente.model_dump(exclude={"id"}, exclude_none=True)
-        servicio = crear_servicio_crud()
-        filas = await servicio.actualizar("cliente", "id", str(id), datos, esquema)
+        servicio = crear_servicio_cliente()
+        filas = await servicio.actualizar(id, datos, esquema)
 
         if filas > 0:
             return {
@@ -175,8 +175,8 @@ async def eliminar_cliente(
 ):
     """Elimina un cliente por su id."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.eliminar("cliente", "id", str(id), esquema)
+        servicio = crear_servicio_cliente()
+        filas = await servicio.eliminar(id, esquema)
 
         if filas > 0:
             return {

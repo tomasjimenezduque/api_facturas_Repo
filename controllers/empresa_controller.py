@@ -12,7 +12,7 @@ Endpoints:
 from fastapi import APIRouter, HTTPException, Query, Response
 
 from models.empresa import Empresa
-from servicios.fabrica_repositorios import crear_servicio_crud
+from servicios.fabrica_repositorios import crear_servicio_empresa
 
 
 router = APIRouter(prefix="/api/empresa", tags=["Empresa"])
@@ -29,8 +29,8 @@ async def listar_empresas(
 ):
     """Lista todas las empresas."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.listar("empresa", esquema, limite)
+        servicio = crear_servicio_empresa()
+        filas = await servicio.listar(esquema, limite)
 
         if len(filas) == 0:
             return Response(status_code=204)
@@ -62,8 +62,8 @@ async def obtener_empresa(
 ):
     """Obtiene una empresa por su código."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.obtener_por_clave("empresa", "codigo", codigo, esquema)
+        servicio = crear_servicio_empresa()
+        filas = await servicio.obtener_por_codigo(codigo, esquema)
 
         if len(filas) == 0:
             raise HTTPException(status_code=404, detail={
@@ -97,8 +97,8 @@ async def crear_empresa(
     """Crea una nueva empresa. Valida con el modelo Pydantic."""
     try:
         datos = empresa.model_dump()
-        servicio = crear_servicio_crud()
-        creado = await servicio.crear("empresa", datos, esquema)
+        servicio = crear_servicio_empresa()
+        creado = await servicio.crear(datos, esquema)
 
         if creado:
             return {
@@ -136,8 +136,8 @@ async def actualizar_empresa(
     """Actualiza una empresa existente."""
     try:
         datos = empresa.model_dump(exclude={"codigo"})
-        servicio = crear_servicio_crud()
-        filas = await servicio.actualizar("empresa", "codigo", codigo, datos, esquema)
+        servicio = crear_servicio_empresa()
+        filas = await servicio.actualizar(codigo, datos, esquema)
 
         if filas > 0:
             return {
@@ -175,8 +175,8 @@ async def eliminar_empresa(
 ):
     """Elimina una empresa por su código."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.eliminar("empresa", "codigo", codigo, esquema)
+        servicio = crear_servicio_empresa()
+        filas = await servicio.eliminar(codigo, esquema)
 
         if filas > 0:
             return {

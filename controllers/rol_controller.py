@@ -12,7 +12,7 @@ Endpoints:
 from fastapi import APIRouter, HTTPException, Query, Response
 
 from models.rol import Rol
-from servicios.fabrica_repositorios import crear_servicio_crud
+from servicios.fabrica_repositorios import crear_servicio_rol
 
 
 router = APIRouter(prefix="/api/rol", tags=["Rol"])
@@ -29,8 +29,8 @@ async def listar_roles(
 ):
     """Lista todos los roles."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.listar("rol", esquema, limite)
+        servicio = crear_servicio_rol()
+        filas = await servicio.listar(esquema, limite)
 
         if len(filas) == 0:
             return Response(status_code=204)
@@ -62,8 +62,8 @@ async def obtener_rol(
 ):
     """Obtiene un rol por su id."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.obtener_por_clave("rol", "id", str(id), esquema)
+        servicio = crear_servicio_rol()
+        filas = await servicio.obtener_por_id(id, esquema)
 
         if len(filas) == 0:
             raise HTTPException(status_code=404, detail={
@@ -97,8 +97,8 @@ async def crear_rol(
     """Crea un nuevo rol. Valida con el modelo Pydantic."""
     try:
         datos = rol.model_dump(exclude_none=True)
-        servicio = crear_servicio_crud()
-        creado = await servicio.crear("rol", datos, esquema)
+        servicio = crear_servicio_rol()
+        creado = await servicio.crear(datos, esquema)
 
         if creado:
             return {
@@ -136,8 +136,8 @@ async def actualizar_rol(
     """Actualiza un rol existente."""
     try:
         datos = rol.model_dump(exclude={"id"})
-        servicio = crear_servicio_crud()
-        filas = await servicio.actualizar("rol", "id", str(id), datos, esquema)
+        servicio = crear_servicio_rol()
+        filas = await servicio.actualizar(id, datos, esquema)
 
         if filas > 0:
             return {
@@ -175,8 +175,8 @@ async def eliminar_rol(
 ):
     """Elimina un rol por su id."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.eliminar("rol", "id", str(id), esquema)
+        servicio = crear_servicio_rol()
+        filas = await servicio.eliminar(id, esquema)
 
         if filas > 0:
             return {

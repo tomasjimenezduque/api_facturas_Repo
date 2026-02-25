@@ -13,7 +13,7 @@ Endpoints:
 from fastapi import APIRouter, HTTPException, Query, Response
 
 from models.rutarol import RutaRol
-from servicios.fabrica_repositorios import crear_servicio_crud
+from servicios.fabrica_repositorios import crear_servicio_rutarol
 
 
 router = APIRouter(prefix="/api/rutarol", tags=["RutaRol"])
@@ -30,8 +30,8 @@ async def listar_rutarol(
 ):
     """Lista todas las relaciones ruta-rol."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.listar("rutarol", esquema, limite)
+        servicio = crear_servicio_rutarol()
+        filas = await servicio.listar(esquema, limite)
 
         if len(filas) == 0:
             return Response(status_code=204)
@@ -63,8 +63,8 @@ async def obtener_rutas_de_rol(
 ):
     """Obtiene las rutas asignadas a un rol."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.obtener_por_clave("rutarol", "rol", rol, esquema)
+        servicio = crear_servicio_rutarol()
+        filas = await servicio.obtener_por_rol(rol, esquema)
 
         if len(filas) == 0:
             raise HTTPException(status_code=404, detail={
@@ -99,8 +99,8 @@ async def crear_rutarol(
     """Asigna una ruta a un rol."""
     try:
         datos = rutarol.model_dump()
-        servicio = crear_servicio_crud()
-        creado = await servicio.crear("rutarol", datos, esquema)
+        servicio = crear_servicio_rutarol()
+        creado = await servicio.crear(datos, esquema)
 
         if creado:
             return {
@@ -137,8 +137,8 @@ async def eliminar_rutarol(
 ):
     """Quita una ruta de un rol."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.eliminar("rutarol", "ruta", valor_ruta, esquema)
+        servicio = crear_servicio_rutarol()
+        filas = await servicio.eliminar(valor_ruta, esquema)
 
         if filas > 0:
             return {

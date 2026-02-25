@@ -14,7 +14,7 @@ Endpoints:
 from fastapi import APIRouter, HTTPException, Query, Response
 
 from models.rol_usuario import RolUsuario
-from servicios.fabrica_repositorios import crear_servicio_crud
+from servicios.fabrica_repositorios import crear_servicio_rol_usuario
 
 
 router = APIRouter(prefix="/api/rol-usuario", tags=["RolUsuario"])
@@ -31,8 +31,8 @@ async def listar_roles_usuarios(
 ):
     """Lista todas las relaciones rol-usuario."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.listar("rol_usuario", esquema, limite)
+        servicio = crear_servicio_rol_usuario()
+        filas = await servicio.listar(esquema, limite)
 
         if len(filas) == 0:
             return Response(status_code=204)
@@ -64,10 +64,8 @@ async def obtener_roles_de_usuario(
 ):
     """Obtiene los roles asignados a un usuario."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.obtener_por_clave(
-            "rol_usuario", "fkemail", fkemail, esquema
-        )
+        servicio = crear_servicio_rol_usuario()
+        filas = await servicio.obtener_por_email(fkemail, esquema)
 
         if len(filas) == 0:
             raise HTTPException(status_code=404, detail={
@@ -101,10 +99,8 @@ async def obtener_usuarios_de_rol(
 ):
     """Obtiene los usuarios que tienen un rol específico."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.obtener_por_clave(
-            "rol_usuario", "fkidrol", str(fkidrol), esquema
-        )
+        servicio = crear_servicio_rol_usuario()
+        filas = await servicio.obtener_por_rol(fkidrol, esquema)
 
         if len(filas) == 0:
             raise HTTPException(status_code=404, detail={
@@ -139,8 +135,8 @@ async def crear_rol_usuario(
     """Asigna un rol a un usuario."""
     try:
         datos = rol_usuario.model_dump()
-        servicio = crear_servicio_crud()
-        creado = await servicio.crear("rol_usuario", datos, esquema)
+        servicio = crear_servicio_rol_usuario()
+        creado = await servicio.crear(datos, esquema)
 
         if creado:
             return {
@@ -177,10 +173,8 @@ async def eliminar_rol_usuario(
 ):
     """Quita un rol de un usuario."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.eliminar(
-            "rol_usuario", "fkemail", fkemail, esquema
-        )
+        servicio = crear_servicio_rol_usuario()
+        filas = await servicio.eliminar(fkemail, esquema)
 
         if filas > 0:
             return {

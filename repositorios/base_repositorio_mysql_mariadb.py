@@ -1,18 +1,16 @@
 """
-repositorio_lectura_sqlserver.py — Repositorio CRUD para SQL Server.
+base_repositorio_mysql_mariadb.py — Clase base con lógica SQL para MySQL y MariaDB.
  
-Características de SQL Server:
-- Identificadores con [corchetes]
-- TOP (n) en lugar de LIMIT
-- Esquema por defecto: 'dbo'
-- Requiere convertir cadena ODBC a URL de SQLAlchemy
+Características de MySQL/MariaDB:
+- Identificadores con `backticks`
+- LIMIT n para limitar resultados
+- No usa esquemas tradicionales (la base de datos es el contenedor)
+- Soporta cadenas de conexión en formato C# (Server=...;Port=...;...)
 """
  
 from typing import Any
-from datetime import datetime, date, time
+from datetime import datetime, date, time, timedelta
 from decimal import Decimal
-from uuid import UUID
-from urllib.parse import quote_plus
  
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine
@@ -21,8 +19,8 @@ from servicios.abstracciones.i_proveedor_conexion import IProveedorConexion
 from servicios.utilidades.encriptacion_bcrypt import encriptar
  
  
-class RepositorioLecturaSqlServer:
-    """Implementación de acceso a datos para SQL Server usando SQLAlchemy async."""
+class BaseRepositorioMysqlMariaDB:
+    """Clase base con la lógica SQL de MySQL/MariaDB. Los repositorios específicos heredan de esta clase."""
  
     def __init__(self, proveedor_conexion: IProveedorConexion):
         if proveedor_conexion is None:
@@ -30,21 +28,37 @@ class RepositorioLecturaSqlServer:
         self._proveedor_conexion = proveedor_conexion
         self._engine: AsyncEngine | None = None
  
-    def _convertir_odbc_a_sqlalchemy(self, cadena_odbc: str) -> str:
+    def _convertir_cadena_csharp_a_sqlalchemy(self, cadena: str) -> str:
         """
-        Convierte una cadena ODBC a formato URL de SQLAlchemy.
-        Si ya tiene formato SQLAlchemy (mssql+...), la retorna tal cual.
+        Convierte una cadena en formato C# (Server=...;Port=...;...) a URL de SQLAlchemy.
+        Si ya es formato URL (mysql+...), la retorna tal cual.
         """
-        if cadena_odbc.startswith("mssql+"):
-            return cadena_odbc
-        cadena_encoded = quote_plus(cadena_odbc)
-        return f"mssql+aioodbc:///?odbc_connect={cadena_encoded}"
+        if cadena.startswith("mysql+") or cadena.startswith("mariadb+"):
+            return cadena
+ 
+        # Parsear formato key=value;key=value;...
+        partes = {}
+        for segmento in cadena.split(";"):
+            segmento = segmento.strip()
+            if "=" in segmento:
+                clave, valor = segmento.split("=", 1)
+                partes[clave.strip().lower()] = valor.strip()
+ 
+        host = partes.get("server", "localhost")
+        port = partes.get("port", "3306")
+        database = partes.get("database", "")
+        user = partes.get("user", partes.get("uid", "root"))
+        password = partes.get("password", partes.get("pwd", ""))
+ 
+        if password:
+            return f"mysql+aiomysql://{user}:{password}@{host}:{port}/{database}"
+        return f"mysql+aiomysql://{user}@{host}:{port}/{database}"
  
     async def _obtener_engine(self) -> AsyncEngine:
         """Crea el engine de conexión la primera vez, luego lo reutiliza."""
         if self._engine is None:
             cadena = self._proveedor_conexion.obtener_cadena_conexion()
-            cadena_sqlalchemy = self._convertir_odbc_a_sqlalchemy(cadena)
+            cadena_sqlalchemy = self._convertir_cadena_csharp_a_sqlalchemy(cadena)
             self._engine = create_async_engine(cadena_sqlalchemy, echo=False)
         return self._engine
  
@@ -53,13 +67,13 @@ class RepositorioLecturaSqlServer:
     # ================================================================
  
     async def _detectar_tipo_columna(
-        self, nombre_tabla: str, esquema: str, nombre_columna: str
+        self, nombre_tabla: str, nombre_columna: str
     ) -> str | None:
-        """Consulta INFORMATION_SCHEMA para saber el tipo de una columna."""
+        """Consulta information_schema para saber el tipo de una columna."""
         sql = text("""
             SELECT DATA_TYPE
-            FROM INFORMATION_SCHEMA.COLUMNS
-            WHERE TABLE_SCHEMA = :esquema
+            FROM information_schema.columns
+            WHERE TABLE_SCHEMA = DATABASE()
             AND TABLE_NAME = :tabla
             AND COLUMN_NAME = :columna
         """)
@@ -67,8 +81,7 @@ class RepositorioLecturaSqlServer:
             engine = await self._obtener_engine()
             async with engine.connect() as conn:
                 result = await conn.execute(sql, {
-                    "esquema": esquema, "tabla": nombre_tabla,
-                    "columna": nombre_columna
+                    "tabla": nombre_tabla, "columna": nombre_columna
                 })
                 row = result.fetchone()
                 return row[0].lower() if row else None
@@ -80,19 +93,18 @@ class RepositorioLecturaSqlServer:
         if tipo_destino is None:
             return valor
         try:
-            if tipo_destino in ('int', 'bigint', 'smallint', 'tinyint'):
+            if tipo_destino in ('int', 'integer', 'bigint', 'smallint',
+                                'tinyint', 'mediumint'):
                 return int(valor)
-            if tipo_destino in ('decimal', 'numeric', 'money', 'smallmoney'):
+            if tipo_destino in ('decimal', 'numeric'):
                 return Decimal(valor)
-            if tipo_destino in ('float', 'real'):
+            if tipo_destino in ('float', 'double', 'real'):
                 return float(valor)
             if tipo_destino == 'bit':
                 return valor.lower() in ('true', '1', 'yes', 'si')
-            if tipo_destino == 'uniqueidentifier':
-                return UUID(valor)
             if tipo_destino == 'date':
                 return self._extraer_solo_fecha(valor)
-            if tipo_destino in ('datetime', 'datetime2', 'smalldatetime'):
+            if tipo_destino in ('datetime', 'timestamp'):
                 return datetime.fromisoformat(valor.replace('Z', '+00:00'))
             if tipo_destino == 'time':
                 return time.fromisoformat(valor)
@@ -110,52 +122,57 @@ class RepositorioLecturaSqlServer:
         """Detecta si un valor tiene formato YYYY-MM-DD (solo fecha)."""
         return len(valor) == 10 and valor.count('-') == 2 and 'T' not in valor
  
+    def _serializar_valor(self, valor: Any) -> Any:
+        """Convierte tipos Python a tipos que FastAPI puede serializar a JSON."""
+        if isinstance(valor, (datetime, date)):
+            return valor.isoformat()
+        elif isinstance(valor, time):
+            return valor.isoformat()
+        elif isinstance(valor, timedelta):
+            return str(valor)
+        elif isinstance(valor, Decimal):
+            return float(valor)
+        elif isinstance(valor, bytes):
+            return valor.decode('utf-8', errors='replace')
+        return valor
+ 
     # ================================================================
-    # OPERACIÓN 1: LISTAR (SELECT TOP (n) * FROM [esquema].[tabla])
+    # OPERACIÓN 1: LISTAR (SELECT * FROM `tabla` LIMIT n)
     # ================================================================
  
-    async def obtener_filas(
+    async def _obtener_filas(
         self, nombre_tabla: str, esquema: str | None = None,
         limite: int | None = None
     ) -> list[dict[str, Any]]:
-        """Obtiene filas de una tabla con TOP (n)."""
+        """Obtiene filas de una tabla con LIMIT opcional."""
         if not nombre_tabla or not nombre_tabla.strip():
             raise ValueError("El nombre de la tabla no puede estar vacío")
  
-        esquema_final = (esquema or "dbo").strip()
         limite_final = limite or 1000
+        prefijo_esquema = f"`{esquema}`." if esquema else ""
  
-        sql = text(f"SELECT TOP ({limite_final}) * FROM [{esquema_final}].[{nombre_tabla}]")
+        sql = text(f"SELECT * FROM {prefijo_esquema}`{nombre_tabla}` LIMIT :limite")
  
         try:
             engine = await self._obtener_engine()
             async with engine.connect() as conn:
-                result = await conn.execute(sql)
+                result = await conn.execute(sql, {"limite": limite_final})
                 columnas = result.keys()
-                filas = []
-                for row in result.fetchall():
-                    fila = {}
-                    for i, columna in enumerate(columnas):
-                        valor = row[i]
-                        if isinstance(valor, (datetime, date)):
-                            valor = valor.isoformat()
-                        elif isinstance(valor, Decimal):
-                            valor = float(valor)
-                        elif isinstance(valor, UUID):
-                            valor = str(valor)
-                        fila[columna] = valor
-                    filas.append(fila)
-                return filas
+                return [
+                    {col: self._serializar_valor(row[i])
+                     for i, col in enumerate(columnas)}
+                    for row in result.fetchall()
+                ]
         except Exception as ex:
             raise RuntimeError(
-                f"Error SQL Server al consultar '{esquema_final}.{nombre_tabla}': {ex}"
+                f"Error MySQL/MariaDB al consultar '{nombre_tabla}': {ex}"
             ) from ex
  
     # ================================================================
     # OPERACIÓN 2: BUSCAR POR CLAVE
     # ================================================================
  
-    async def obtener_por_clave(
+    async def _obtener_por_clave(
         self, nombre_tabla: str, nombre_clave: str, valor: str,
         esquema: str | None = None
     ) -> list[dict[str, Any]]:
@@ -167,55 +184,46 @@ class RepositorioLecturaSqlServer:
         if not valor or not valor.strip():
             raise ValueError("El valor no puede estar vacío")
  
-        esquema_final = (esquema or "dbo").strip()
+        prefijo_esquema = f"`{esquema}`." if esquema else ""
  
         try:
             tipo_columna = await self._detectar_tipo_columna(
-                nombre_tabla, esquema_final, nombre_clave
+                nombre_tabla, nombre_clave
             )
  
-            if (tipo_columna in ('datetime', 'datetime2')
+            if (tipo_columna in ('datetime', 'timestamp')
                     and self._es_fecha_sin_hora(valor)):
-                sql = text(f"""
-                    SELECT * FROM [{esquema_final}].[{nombre_tabla}]
-                    WHERE CAST([{nombre_clave}] AS DATE) = :valor
-                """)
+                sql = text(f'''
+                    SELECT * FROM {prefijo_esquema}`{nombre_tabla}`
+                    WHERE DATE(`{nombre_clave}`) = :valor
+                ''')
                 valor_convertido = self._extraer_solo_fecha(valor)
             else:
-                sql = text(f"""
-                    SELECT * FROM [{esquema_final}].[{nombre_tabla}]
-                    WHERE [{nombre_clave}] = :valor
-                """)
+                sql = text(f'''
+                    SELECT * FROM {prefijo_esquema}`{nombre_tabla}`
+                    WHERE `{nombre_clave}` = :valor
+                ''')
                 valor_convertido = self._convertir_valor(valor, tipo_columna)
  
             engine = await self._obtener_engine()
             async with engine.connect() as conn:
                 result = await conn.execute(sql, {"valor": valor_convertido})
                 columnas = result.keys()
-                filas = []
-                for row in result.fetchall():
-                    fila = {}
-                    for i, columna in enumerate(columnas):
-                        val = row[i]
-                        if isinstance(val, (datetime, date)):
-                            val = val.isoformat()
-                        elif isinstance(val, Decimal):
-                            val = float(val)
-                        elif isinstance(val, UUID):
-                            val = str(val)
-                        fila[columna] = val
-                    filas.append(fila)
-                return filas
+                return [
+                    {col: self._serializar_valor(row[i])
+                     for i, col in enumerate(columnas)}
+                    for row in result.fetchall()
+                ]
         except Exception as ex:
             raise RuntimeError(
-                f"Error SQL Server al filtrar '{esquema_final}.{nombre_tabla}': {ex}"
+                f"Error MySQL/MariaDB al filtrar '{nombre_tabla}': {ex}"
             ) from ex
  
     # ================================================================
-    # OPERACIÓN 3: CREAR (INSERT INTO [esquema].[tabla])
+    # OPERACIÓN 3: CREAR (INSERT INTO `tabla`)
     # ================================================================
  
-    async def crear(
+    async def _crear(
         self, nombre_tabla: str, datos: dict[str, Any],
         esquema: str | None = None, campos_encriptar: str | None = None
     ) -> bool:
@@ -225,7 +233,7 @@ class RepositorioLecturaSqlServer:
         if not datos:
             raise ValueError("Los datos no pueden estar vacíos")
  
-        esquema_final = (esquema or "dbo").strip()
+        prefijo_esquema = f"`{esquema}`." if esquema else ""
         datos_finales = dict(datos)
  
         if campos_encriptar:
@@ -236,20 +244,18 @@ class RepositorioLecturaSqlServer:
                 if campo.lower() in campos_a_encriptar and datos_finales[campo]:
                     datos_finales[campo] = encriptar(str(datos_finales[campo]))
  
-        columnas = ", ".join(f"[{k}]" for k in datos_finales.keys())
-        parametros = ", ".join(f":{k}" for k in datos_finales.keys())
-        sql = text(f"INSERT INTO [{esquema_final}].[{nombre_tabla}] ({columnas}) VALUES ({parametros})")
+        columnas = ", ".join(f"`{k}`" for k in datos_finales.keys())
+        parametros = ", ".join(f":p_{k}" for k in datos_finales.keys())
+        sql = text(f"INSERT INTO {prefijo_esquema}`{nombre_tabla}` ({columnas}) VALUES ({parametros})")
  
         try:
             valores = {}
             for key, val in datos_finales.items():
                 if val is not None and isinstance(val, str):
-                    tipo = await self._detectar_tipo_columna(
-                        nombre_tabla, esquema_final, key
-                    )
-                    valores[key] = self._convertir_valor(val, tipo)
+                    tipo = await self._detectar_tipo_columna(nombre_tabla, key)
+                    valores[f"p_{key}"] = self._convertir_valor(val, tipo)
                 else:
-                    valores[key] = val
+                    valores[f"p_{key}"] = val
  
             engine = await self._obtener_engine()
             async with engine.begin() as conn:
@@ -257,14 +263,14 @@ class RepositorioLecturaSqlServer:
                 return result.rowcount > 0
         except Exception as ex:
             raise RuntimeError(
-                f"Error SQL Server al insertar en '{esquema_final}.{nombre_tabla}': {ex}"
+                f"Error MySQL/MariaDB al insertar en '{nombre_tabla}': {ex}"
             ) from ex
  
     # ================================================================
-    # OPERACIÓN 4: ACTUALIZAR (UPDATE [esquema].[tabla] SET ...)
+    # OPERACIÓN 4: ACTUALIZAR (UPDATE `tabla` SET ...)
     # ================================================================
  
-    async def actualizar(
+    async def _actualizar(
         self, nombre_tabla: str, nombre_clave: str, valor_clave: str,
         datos: dict[str, Any], esquema: str | None = None,
         campos_encriptar: str | None = None
@@ -279,7 +285,7 @@ class RepositorioLecturaSqlServer:
         if not datos:
             raise ValueError("Los datos no pueden estar vacíos")
  
-        esquema_final = (esquema or "dbo").strip()
+        prefijo_esquema = f"`{esquema}`." if esquema else ""
         datos_finales = dict(datos)
  
         if campos_encriptar:
@@ -290,28 +296,23 @@ class RepositorioLecturaSqlServer:
                 if campo.lower() in campos_a_encriptar and datos_finales[campo]:
                     datos_finales[campo] = encriptar(str(datos_finales[campo]))
  
-        clausula_set = ", ".join(f"[{k}] = :{k}" for k in datos_finales.keys())
+        clausula_set = ", ".join(f"`{k}` = :p_{k}" for k in datos_finales.keys())
         sql = text(f'''
-            UPDATE [{esquema_final}].[{nombre_tabla}]
+            UPDATE {prefijo_esquema}`{nombre_tabla}`
             SET {clausula_set}
-            WHERE [{nombre_clave}] = :valor_clave
+            WHERE `{nombre_clave}` = :valor_clave
         ''')
  
         try:
             valores = {}
             for key, val in datos_finales.items():
                 if val is not None and isinstance(val, str):
-                    tipo = await self._detectar_tipo_columna(
-                        nombre_tabla, esquema_final, key
-                    )
-                    valores[key] = self._convertir_valor(val, tipo)
+                    tipo = await self._detectar_tipo_columna(nombre_tabla, key)
+                    valores[f"p_{key}"] = self._convertir_valor(val, tipo)
                 else:
-                    valores[key] = val
+                    valores[f"p_{key}"] = val
  
-            tipo_clave = await self._detectar_tipo_columna(
-                nombre_tabla, esquema_final, nombre_clave
-            )
-            valores["valor_clave"] = self._convertir_valor(valor_clave, tipo_clave)
+            valores["valor_clave"] = valor_clave
  
             engine = await self._obtener_engine()
             async with engine.begin() as conn:
@@ -319,14 +320,14 @@ class RepositorioLecturaSqlServer:
                 return result.rowcount
         except Exception as ex:
             raise RuntimeError(
-                f"Error SQL Server al actualizar '{esquema_final}.{nombre_tabla}': {ex}"
+                f"Error MySQL/MariaDB al actualizar '{nombre_tabla}': {ex}"
             ) from ex
  
     # ================================================================
-    # OPERACIÓN 5: ELIMINAR (DELETE FROM [esquema].[tabla] WHERE ...)
+    # OPERACIÓN 5: ELIMINAR (DELETE FROM `tabla` WHERE ...)
     # ================================================================
  
-    async def eliminar(
+    async def _eliminar(
         self, nombre_tabla: str, nombre_clave: str, valor_clave: str,
         esquema: str | None = None
     ) -> int:
@@ -338,33 +339,28 @@ class RepositorioLecturaSqlServer:
         if not valor_clave or not valor_clave.strip():
             raise ValueError("El valor de la clave no puede estar vacío")
  
-        esquema_final = (esquema or "dbo").strip()
+        prefijo_esquema = f"`{esquema}`." if esquema else ""
  
         sql = text(f'''
-            DELETE FROM [{esquema_final}].[{nombre_tabla}]
-            WHERE [{nombre_clave}] = :valor_clave
+            DELETE FROM {prefijo_esquema}`{nombre_tabla}`
+            WHERE `{nombre_clave}` = :valor_clave
         ''')
  
         try:
-            tipo_clave = await self._detectar_tipo_columna(
-                nombre_tabla, esquema_final, nombre_clave
-            )
-            valor_convertido = self._convertir_valor(valor_clave, tipo_clave)
- 
             engine = await self._obtener_engine()
             async with engine.begin() as conn:
-                result = await conn.execute(sql, {"valor_clave": valor_convertido})
+                result = await conn.execute(sql, {"valor_clave": valor_clave})
                 return result.rowcount
         except Exception as ex:
             raise RuntimeError(
-                f"Error SQL Server al eliminar de '{esquema_final}.{nombre_tabla}': {ex}"
+                f"Error MySQL/MariaDB al eliminar de '{nombre_tabla}': {ex}"
             ) from ex
  
     # ================================================================
     # OPERACIÓN 6: OBTENER HASH DE CONTRASEÑA (para login)
     # ================================================================
  
-    async def obtener_hash_contrasena(
+    async def _obtener_hash_contrasena(
         self, nombre_tabla: str, campo_usuario: str,
         campo_contrasena: str, valor_usuario: str,
         esquema: str | None = None
@@ -379,12 +375,13 @@ class RepositorioLecturaSqlServer:
         if not valor_usuario or not valor_usuario.strip():
             raise ValueError("El valor de usuario no puede estar vacío")
  
-        esquema_final = (esquema or "dbo").strip()
+        prefijo_esquema = f"`{esquema}`." if esquema else ""
  
         sql = text(f'''
-            SELECT [{campo_contrasena}]
-            FROM [{esquema_final}].[{nombre_tabla}]
-            WHERE [{campo_usuario}] = :valor_usuario
+            SELECT `{campo_contrasena}`
+            FROM {prefijo_esquema}`{nombre_tabla}`
+            WHERE `{campo_usuario}` = :valor_usuario
+            LIMIT 1
         ''')
  
         try:
@@ -395,5 +392,5 @@ class RepositorioLecturaSqlServer:
                 return str(row[0]) if row and row[0] else None
         except Exception as ex:
             raise RuntimeError(
-                f"Error SQL Server al obtener hash de '{esquema_final}.{nombre_tabla}': {ex}"
+                f"Error MySQL/MariaDB al obtener hash de '{nombre_tabla}': {ex}"
             ) from ex

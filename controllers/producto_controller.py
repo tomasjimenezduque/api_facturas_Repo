@@ -12,7 +12,7 @@ Endpoints:
 from fastapi import APIRouter, HTTPException, Query, Response
 
 from models.producto import Producto
-from servicios.fabrica_repositorios import crear_servicio_crud
+from servicios.fabrica_repositorios import crear_servicio_producto
 
 
 router = APIRouter(prefix="/api/producto", tags=["Producto"])
@@ -29,8 +29,8 @@ async def listar_productos(
 ):
     """Lista todos los productos."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.listar("producto", esquema, limite)
+        servicio = crear_servicio_producto()
+        filas = await servicio.listar(esquema, limite)
 
         if len(filas) == 0:
             return Response(status_code=204)
@@ -62,8 +62,8 @@ async def obtener_producto(
 ):
     """Obtiene un producto por su código."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.obtener_por_clave("producto", "codigo", codigo, esquema)
+        servicio = crear_servicio_producto()
+        filas = await servicio.obtener_por_codigo(codigo, esquema)
 
         if len(filas) == 0:
             raise HTTPException(status_code=404, detail={
@@ -97,8 +97,8 @@ async def crear_producto(
     """Crea un nuevo producto. Valida con el modelo Pydantic."""
     try:
         datos = producto.model_dump()
-        servicio = crear_servicio_crud()
-        creado = await servicio.crear("producto", datos, esquema)
+        servicio = crear_servicio_producto()
+        creado = await servicio.crear(datos, esquema)
 
         if creado:
             return {
@@ -136,8 +136,8 @@ async def actualizar_producto(
     """Actualiza un producto existente."""
     try:
         datos = producto.model_dump(exclude={"codigo"})
-        servicio = crear_servicio_crud()
-        filas = await servicio.actualizar("producto", "codigo", codigo, datos, esquema)
+        servicio = crear_servicio_producto()
+        filas = await servicio.actualizar(codigo, datos, esquema)
 
         if filas > 0:
             return {
@@ -175,8 +175,8 @@ async def eliminar_producto(
 ):
     """Elimina un producto por su código."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.eliminar("producto", "codigo", codigo, esquema)
+        servicio = crear_servicio_producto()
+        filas = await servicio.eliminar(codigo, esquema)
 
         if filas > 0:
             return {

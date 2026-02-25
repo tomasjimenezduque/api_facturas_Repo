@@ -13,7 +13,7 @@ Endpoints:
 from fastapi import APIRouter, HTTPException, Query, Response
 
 from models.productosporfactura import ProductosPorFactura
-from servicios.fabrica_repositorios import crear_servicio_crud
+from servicios.fabrica_repositorios import crear_servicio_productosporfactura
 
 
 router = APIRouter(prefix="/api/productosporfactura", tags=["ProductosPorFactura"])
@@ -30,8 +30,8 @@ async def listar_detalles(
 ):
     """Lista todos los detalles de facturas."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.listar("productosporfactura", esquema, limite)
+        servicio = crear_servicio_productosporfactura()
+        filas = await servicio.listar(esquema, limite)
 
         if len(filas) == 0:
             return Response(status_code=204)
@@ -63,10 +63,8 @@ async def obtener_por_factura(
 ):
     """Obtiene los productos de una factura específica."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.obtener_por_clave(
-            "productosporfactura", "fknumfactura", str(fknumfactura), esquema
-        )
+        servicio = crear_servicio_productosporfactura()
+        filas = await servicio.obtener_por_factura(fknumfactura, esquema)
 
         if len(filas) == 0:
             raise HTTPException(status_code=404, detail={
@@ -101,8 +99,8 @@ async def crear_detalle(
     """Crea un nuevo detalle de factura. Valida con el modelo Pydantic."""
     try:
         datos = detalle.model_dump()
-        servicio = crear_servicio_crud()
-        creado = await servicio.crear("productosporfactura", datos, esquema)
+        servicio = crear_servicio_productosporfactura()
+        creado = await servicio.crear(datos, esquema)
 
         if creado:
             return {
@@ -139,10 +137,8 @@ async def eliminar_detalle(
 ):
     """Elimina un detalle de factura por su PK compuesta."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.eliminar(
-            "productosporfactura", "fknumfactura", str(fknumfactura), esquema
-        )
+        servicio = crear_servicio_productosporfactura()
+        filas = await servicio.eliminar(fknumfactura, esquema)
 
         if filas > 0:
             return {

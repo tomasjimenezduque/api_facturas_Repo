@@ -12,7 +12,7 @@ Endpoints:
 from fastapi import APIRouter, HTTPException, Query, Response
 
 from models.ruta import Ruta
-from servicios.fabrica_repositorios import crear_servicio_crud
+from servicios.fabrica_repositorios import crear_servicio_ruta
 
 
 router = APIRouter(prefix="/api/ruta", tags=["Ruta"])
@@ -29,8 +29,8 @@ async def listar_rutas(
 ):
     """Lista todas las rutas."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.listar("ruta", esquema, limite)
+        servicio = crear_servicio_ruta()
+        filas = await servicio.listar(esquema, limite)
 
         if len(filas) == 0:
             return Response(status_code=204)
@@ -62,8 +62,8 @@ async def obtener_ruta(
 ):
     """Obtiene una ruta por su valor."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.obtener_por_clave("ruta", "ruta", valor_ruta, esquema)
+        servicio = crear_servicio_ruta()
+        filas = await servicio.obtener_por_ruta(valor_ruta, esquema)
 
         if len(filas) == 0:
             raise HTTPException(status_code=404, detail={
@@ -97,8 +97,8 @@ async def crear_ruta(
     """Crea una nueva ruta. Valida con el modelo Pydantic."""
     try:
         datos = ruta.model_dump()
-        servicio = crear_servicio_crud()
-        creado = await servicio.crear("ruta", datos, esquema)
+        servicio = crear_servicio_ruta()
+        creado = await servicio.crear(datos, esquema)
 
         if creado:
             return {
@@ -136,8 +136,8 @@ async def actualizar_ruta(
     """Actualiza una ruta existente."""
     try:
         datos = ruta.model_dump(exclude={"ruta"})
-        servicio = crear_servicio_crud()
-        filas = await servicio.actualizar("ruta", "ruta", valor_ruta, datos, esquema)
+        servicio = crear_servicio_ruta()
+        filas = await servicio.actualizar(valor_ruta, datos, esquema)
 
         if filas > 0:
             return {
@@ -175,8 +175,8 @@ async def eliminar_ruta(
 ):
     """Elimina una ruta por su valor."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.eliminar("ruta", "ruta", valor_ruta, esquema)
+        servicio = crear_servicio_ruta()
+        filas = await servicio.eliminar(valor_ruta, esquema)
 
         if filas > 0:
             return {

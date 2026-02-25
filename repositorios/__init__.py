@@ -1,11 +1,19 @@
-"""Paquete de repositorios — Implementaciones de acceso a datos."""
- 
-from .repositorio_lectura_sqlserver import RepositorioLecturaSqlServer
-from .repositorio_lectura_postgresql import RepositorioLecturaPostgreSQL
-from .repositorio_lectura_mysql_mariadb import RepositorioLecturaMysqlMariaDB
- 
+"""Paquete de repositorios — Clases base e implementaciones específicas."""
+
+from .base_repositorio_postgresql import BaseRepositorioPostgreSQL
+from .base_repositorio_sqlserver import BaseRepositorioSqlServer
+from .base_repositorio_mysql_mariadb import BaseRepositorioMysqlMariaDB
+
+# Aliases de retrocompatibilidad para el controller genérico
+RepositorioLecturaPostgreSQL = BaseRepositorioPostgreSQL
+RepositorioLecturaSqlServer = BaseRepositorioSqlServer
+RepositorioLecturaMysqlMariaDB = BaseRepositorioMysqlMariaDB
+
 __all__ = [
-    "RepositorioLecturaSqlServer",
+    "BaseRepositorioPostgreSQL",
+    "BaseRepositorioSqlServer",
+    "BaseRepositorioMysqlMariaDB",
     "RepositorioLecturaPostgreSQL",
+    "RepositorioLecturaSqlServer",
     "RepositorioLecturaMysqlMariaDB",
 ]

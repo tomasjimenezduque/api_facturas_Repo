@@ -15,7 +15,7 @@ Endpoints:
 from fastapi import APIRouter, HTTPException, Query, Response
 
 from models.persona import Persona
-from servicios.fabrica_repositorios import crear_servicio_crud
+from servicios.fabrica_repositorios import crear_servicio_persona
 
 
 router = APIRouter(prefix="/api/persona", tags=["Persona"])
@@ -32,8 +32,8 @@ async def listar_personas(
 ):
     """Lista todas las personas."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.listar("persona", esquema, limite)
+        servicio = crear_servicio_persona()
+        filas = await servicio.listar(esquema, limite)
 
         if len(filas) == 0:
             return Response(status_code=204)
@@ -65,8 +65,8 @@ async def obtener_persona(
 ):
     """Obtiene una persona por su código."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.obtener_por_clave("persona", "codigo", codigo, esquema)
+        servicio = crear_servicio_persona()
+        filas = await servicio.obtener_por_codigo(codigo, esquema)
 
         if len(filas) == 0:
             raise HTTPException(status_code=404, detail={
@@ -100,8 +100,8 @@ async def crear_persona(
     """Crea una nueva persona. Valida con el modelo Pydantic."""
     try:
         datos = persona.model_dump()
-        servicio = crear_servicio_crud()
-        creado = await servicio.crear("persona", datos, esquema)
+        servicio = crear_servicio_persona()
+        creado = await servicio.crear(datos, esquema)
 
         if creado:
             return {
@@ -139,8 +139,8 @@ async def actualizar_persona(
     """Actualiza una persona existente."""
     try:
         datos = persona.model_dump(exclude={"codigo"})
-        servicio = crear_servicio_crud()
-        filas = await servicio.actualizar("persona", "codigo", codigo, datos, esquema)
+        servicio = crear_servicio_persona()
+        filas = await servicio.actualizar(codigo, datos, esquema)
 
         if filas > 0:
             return {
@@ -178,8 +178,8 @@ async def eliminar_persona(
 ):
     """Elimina una persona por su código."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.eliminar("persona", "codigo", codigo, esquema)
+        servicio = crear_servicio_persona()
+        filas = await servicio.eliminar(codigo, esquema)
 
         if filas > 0:
             return {

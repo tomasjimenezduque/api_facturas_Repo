@@ -12,7 +12,7 @@ Endpoints:
 from fastapi import APIRouter, HTTPException, Query, Response
 
 from models.factura import Factura
-from servicios.fabrica_repositorios import crear_servicio_crud
+from servicios.fabrica_repositorios import crear_servicio_factura
 
 
 router = APIRouter(prefix="/api/factura", tags=["Factura"])
@@ -29,8 +29,8 @@ async def listar_facturas(
 ):
     """Lista todas las facturas."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.listar("factura", esquema, limite)
+        servicio = crear_servicio_factura()
+        filas = await servicio.listar(esquema, limite)
 
         if len(filas) == 0:
             return Response(status_code=204)
@@ -62,8 +62,8 @@ async def obtener_factura(
 ):
     """Obtiene una factura por su número."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.obtener_por_clave("factura", "numero", str(numero), esquema)
+        servicio = crear_servicio_factura()
+        filas = await servicio.obtener_por_numero(numero, esquema)
 
         if len(filas) == 0:
             raise HTTPException(status_code=404, detail={
@@ -97,8 +97,8 @@ async def crear_factura(
     """Crea una nueva factura. Valida con el modelo Pydantic."""
     try:
         datos = factura.model_dump(exclude_none=True)
-        servicio = crear_servicio_crud()
-        creado = await servicio.crear("factura", datos, esquema)
+        servicio = crear_servicio_factura()
+        creado = await servicio.crear(datos, esquema)
 
         if creado:
             return {
@@ -136,8 +136,8 @@ async def actualizar_factura(
     """Actualiza una factura existente."""
     try:
         datos = factura.model_dump(exclude={"numero"}, exclude_none=True)
-        servicio = crear_servicio_crud()
-        filas = await servicio.actualizar("factura", "numero", str(numero), datos, esquema)
+        servicio = crear_servicio_factura()
+        filas = await servicio.actualizar(numero, datos, esquema)
 
         if filas > 0:
             return {
@@ -175,8 +175,8 @@ async def eliminar_factura(
 ):
     """Elimina una factura por su número."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.eliminar("factura", "numero", str(numero), esquema)
+        servicio = crear_servicio_factura()
+        filas = await servicio.eliminar(numero, esquema)
 
         if filas > 0:
             return {

@@ -13,7 +13,7 @@ Endpoints:
 from fastapi import APIRouter, HTTPException, Query, Response
 
 from models.usuario import Usuario
-from servicios.fabrica_repositorios import crear_servicio_crud
+from servicios.fabrica_repositorios import crear_servicio_usuario
 
 
 router = APIRouter(prefix="/api/usuario", tags=["Usuario"])
@@ -30,8 +30,8 @@ async def listar_usuarios(
 ):
     """Lista todos los usuarios."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.listar("usuario", esquema, limite)
+        servicio = crear_servicio_usuario()
+        filas = await servicio.listar(esquema, limite)
 
         if len(filas) == 0:
             return Response(status_code=204)
@@ -63,8 +63,8 @@ async def obtener_usuario(
 ):
     """Obtiene un usuario por su email."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.obtener_por_clave("usuario", "email", email, esquema)
+        servicio = crear_servicio_usuario()
+        filas = await servicio.obtener_por_email(email, esquema)
 
         if len(filas) == 0:
             raise HTTPException(status_code=404, detail={
@@ -98,10 +98,8 @@ async def crear_usuario(
     """Crea un nuevo usuario. La contraseña se encripta con BCrypt."""
     try:
         datos = usuario.model_dump()
-        servicio = crear_servicio_crud()
-        creado = await servicio.crear(
-            "usuario", datos, esquema, campos_encriptar="contrasena"
-        )
+        servicio = crear_servicio_usuario()
+        creado = await servicio.crear(datos, esquema)
 
         if creado:
             return {
@@ -139,11 +137,8 @@ async def actualizar_usuario(
     """Actualiza un usuario existente. La contraseña se re-encripta."""
     try:
         datos = usuario.model_dump(exclude={"email"})
-        servicio = crear_servicio_crud()
-        filas = await servicio.actualizar(
-            "usuario", "email", email, datos, esquema,
-            campos_encriptar="contrasena"
-        )
+        servicio = crear_servicio_usuario()
+        filas = await servicio.actualizar(email, datos, esquema)
 
         if filas > 0:
             return {
@@ -181,8 +176,8 @@ async def eliminar_usuario(
 ):
     """Elimina un usuario por su email."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.eliminar("usuario", "email", email, esquema)
+        servicio = crear_servicio_usuario()
+        filas = await servicio.eliminar(email, esquema)
 
         if filas > 0:
             return {
@@ -217,9 +212,8 @@ async def verificar_contrasena(
 ):
     """Verifica credenciales de un usuario contra la BD usando BCrypt."""
     try:
-        servicio = crear_servicio_crud()
+        servicio = crear_servicio_usuario()
         codigo, mensaje = await servicio.verificar_contrasena(
-            "usuario", "email", "contrasena",
             valor_usuario, valor_contrasena, esquema
         )
 

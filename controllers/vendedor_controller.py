@@ -12,7 +12,7 @@ Endpoints:
 from fastapi import APIRouter, HTTPException, Query, Response
 
 from models.vendedor import Vendedor
-from servicios.fabrica_repositorios import crear_servicio_crud
+from servicios.fabrica_repositorios import crear_servicio_vendedor
 
 
 router = APIRouter(prefix="/api/vendedor", tags=["Vendedor"])
@@ -29,8 +29,8 @@ async def listar_vendedores(
 ):
     """Lista todos los vendedores."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.listar("vendedor", esquema, limite)
+        servicio = crear_servicio_vendedor()
+        filas = await servicio.listar(esquema, limite)
 
         if len(filas) == 0:
             return Response(status_code=204)
@@ -62,8 +62,8 @@ async def obtener_vendedor(
 ):
     """Obtiene un vendedor por su id."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.obtener_por_clave("vendedor", "id", str(id), esquema)
+        servicio = crear_servicio_vendedor()
+        filas = await servicio.obtener_por_id(id, esquema)
 
         if len(filas) == 0:
             raise HTTPException(status_code=404, detail={
@@ -97,8 +97,8 @@ async def crear_vendedor(
     """Crea un nuevo vendedor. Valida con el modelo Pydantic."""
     try:
         datos = vendedor.model_dump(exclude_none=True)
-        servicio = crear_servicio_crud()
-        creado = await servicio.crear("vendedor", datos, esquema)
+        servicio = crear_servicio_vendedor()
+        creado = await servicio.crear(datos, esquema)
 
         if creado:
             return {
@@ -136,8 +136,8 @@ async def actualizar_vendedor(
     """Actualiza un vendedor existente."""
     try:
         datos = vendedor.model_dump(exclude={"id"}, exclude_none=True)
-        servicio = crear_servicio_crud()
-        filas = await servicio.actualizar("vendedor", "id", str(id), datos, esquema)
+        servicio = crear_servicio_vendedor()
+        filas = await servicio.actualizar(id, datos, esquema)
 
         if filas > 0:
             return {
@@ -175,8 +175,8 @@ async def eliminar_vendedor(
 ):
     """Elimina un vendedor por su id."""
     try:
-        servicio = crear_servicio_crud()
-        filas = await servicio.eliminar("vendedor", "id", str(id), esquema)
+        servicio = crear_servicio_vendedor()
+        filas = await servicio.eliminar(id, esquema)
 
         if filas > 0:
             return {
