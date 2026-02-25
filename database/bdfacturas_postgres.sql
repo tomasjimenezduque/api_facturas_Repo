@@ -301,7 +301,7 @@ $$;
 
 
 CREATE OR REPLACE PROCEDURE sp_eliminar_persona_con_cliente(
-    IN  p_codigo  INTEGER,
+    IN  p_codigo  VARCHAR,
     INOUT p_resultado JSON DEFAULT NULL
 )
 LANGUAGE plpgsql
@@ -437,7 +437,7 @@ $$;
 
 
 CREATE OR REPLACE PROCEDURE sp_eliminar_persona_con_vendedor(
-    IN  p_codigo  INTEGER,
+    IN  p_codigo  VARCHAR,
     INOUT p_resultado JSON DEFAULT NULL
 )
 LANGUAGE plpgsql
@@ -567,7 +567,7 @@ $$;
 
 
 CREATE OR REPLACE PROCEDURE sp_eliminar_empresa_con_cliente(
-    IN  p_codigo  INTEGER,
+    IN  p_codigo  VARCHAR,
     INOUT p_resultado JSON DEFAULT NULL
 )
 LANGUAGE plpgsql
@@ -824,7 +824,7 @@ $$;
 
 
 CREATE OR REPLACE PROCEDURE sp_eliminar_usuario_con_rol_usuario(
-    IN  p_email  INTEGER,
+    IN  p_email  VARCHAR,
     INOUT p_resultado JSON DEFAULT NULL
 )
 LANGUAGE plpgsql
