@@ -998,6 +998,134 @@ INSERT INTO rutarol (ruta, rol) VALUES
     ('/home',              'Cliente'),
     ('/productos',         'Cliente');
 
+-- ============================================================================
+-- 6. EJEMPLOS DE USO DE LOS STORED PROCEDURES
+-- ============================================================================
+
+-- ── Persona ↔ Cliente ──────────────────────────────────────────────────
+
+-- Crear persona con sus clientes
+CALL sp_crear_persona_con_cliente(
+    '{"codigo":"P100", "nombre":"Diana López", "email":"diana@correo.com", "telefono":"3101234567"}'::JSON,
+    '[{"id":100, "credito":300000, "fkcodempresa":"E001"}]'::JSON,
+    NULL
+);
+
+-- Obtener persona con sus clientes
+CALL sp_obtener_persona_con_cliente('P100', NULL);
+
+-- Actualizar persona y reemplazar sus clientes
+CALL sp_actualizar_persona_con_cliente(
+    'P100',
+    '{"nombre":"Diana López Actualizada", "email":"diana.nueva@correo.com", "telefono":"3109999999"}'::JSON,
+    '[{"id":100, "credito":500000, "fkcodempresa":"E002"}]'::JSON,
+    NULL
+);
+
+-- Eliminar persona con sus clientes
+CALL sp_eliminar_persona_con_cliente('P100', NULL);
+
+
+-- ── Persona ↔ Vendedor ─────────────────────────────────────────────────
+
+-- Crear persona con sus vendedores
+CALL sp_crear_persona_con_vendedor(
+    '{"codigo":"P200", "nombre":"Ricardo Mora", "email":"ricardo@correo.com", "telefono":"3201234567"}'::JSON,
+    '[{"id":100, "carnet":2001, "direccion":"Calle 50 #10-20"}]'::JSON,
+    NULL
+);
+
+-- Obtener persona con sus vendedores
+CALL sp_obtener_persona_con_vendedor('P200', NULL);
+
+-- Actualizar persona y reemplazar sus vendedores
+CALL sp_actualizar_persona_con_vendedor(
+    'P200',
+    '{"nombre":"Ricardo Mora Actualizado", "email":"ricardo.nuevo@correo.com", "telefono":"3209999999"}'::JSON,
+    '[{"id":100, "carnet":2002, "direccion":"Avenida 80 #15-30"}]'::JSON,
+    NULL
+);
+
+-- Eliminar persona con sus vendedores
+CALL sp_eliminar_persona_con_vendedor('P200', NULL);
+
+
+-- ── Empresa ↔ Cliente ──────────────────────────────────────────────────
+
+-- Crear empresa con sus clientes
+CALL sp_crear_empresa_con_cliente(
+    '{"codigo":"E100", "nombre":"Tech Solutions S.A.S."}'::JSON,
+    '[{"id":200, "credito":1000000, "fkcodpersona":"P001"}]'::JSON,
+    NULL
+);
+
+-- Obtener empresa con sus clientes
+CALL sp_obtener_empresa_con_cliente('E100', NULL);
+
+-- Actualizar empresa y reemplazar sus clientes
+CALL sp_actualizar_empresa_con_cliente(
+    'E100',
+    '{"nombre":"Tech Solutions Colombia S.A.S."}'::JSON,
+    '[{"id":200, "credito":2000000, "fkcodpersona":"P001"}]'::JSON,
+    NULL
+);
+
+-- Eliminar empresa con sus clientes
+CALL sp_eliminar_empresa_con_cliente('E100', NULL);
+
+
+-- ── Factura ↔ ProductosPorFactura ──────────────────────────────────────
+
+-- Crear factura con sus detalles (el trigger calcula subtotal y actualiza stock)
+CALL sp_crear_factura_con_productosporfactura(
+    '{"fecha":"2026-01-15 10:30:00", "total":0, "fkidcliente":1, "fkidvendedor":1}'::JSON,
+    '[{"fkcodproducto":"PR003", "cantidad":2, "subtotal":0}, {"fkcodproducto":"PR004", "cantidad":3, "subtotal":0}]'::JSON,
+    NULL
+);
+
+-- Obtener factura con sus detalles
+CALL sp_obtener_factura_con_productosporfactura(7, NULL);
+
+-- Actualizar factura y reemplazar sus detalles
+CALL sp_actualizar_factura_con_productosporfactura(
+    7,
+    '{"fecha":"2026-01-15 11:00:00", "total":0, "fkidcliente":2, "fkidvendedor":2}'::JSON,
+    '[{"fkcodproducto":"PR001", "cantidad":1, "subtotal":0}]'::JSON,
+    NULL
+);
+
+-- Eliminar factura con sus detalles
+CALL sp_eliminar_factura_con_productosporfactura(7, NULL);
+
+
+-- ── Usuario ↔ RolUsuario ──────────────────────────────────────────────
+
+-- Crear usuario con sus roles
+CALL sp_crear_usuario_con_rol_usuario(
+    '{"email":"ejemplo@correo.com", "contrasena":"miPassword123"}'::JSON,
+    '[{"fkidrol":2}, {"fkidrol":3}]'::JSON,
+    NULL
+);
+
+-- Obtener usuario con sus roles
+CALL sp_obtener_usuario_con_rol_usuario('ejemplo@correo.com', NULL);
+
+-- Actualizar usuario y reemplazar sus roles
+CALL sp_actualizar_usuario_con_rol_usuario(
+    'ejemplo@correo.com',
+    '{"contrasena":"nuevoPassword456"}'::JSON,
+    '[{"fkidrol":1}]'::JSON,
+    NULL
+);
+
+-- Eliminar usuario con sus roles
+CALL sp_eliminar_usuario_con_rol_usuario('ejemplo@correo.com', NULL);
+
+
+-- ============================================================================
+-- 7. AJUSTAR SECUENCIAS
+-- ============================================================================
+
 -- Ajustar secuencias al valor máximo actual
 SELECT setval('cliente_id_seq',  (SELECT MAX(id) FROM cliente));
 SELECT setval('factura_numero_seq', (SELECT MAX(numero) FROM factura));
