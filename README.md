@@ -680,6 +680,37 @@ El proyecto incluye documentación paso a paso en formato `.docx` dentro de la c
 
 ---
 
+## Ventajas y desventajas de la arquitectura
+
+### Ventajas
+
+| # | Ventaja | Explicación |
+|---|---------|-------------|
+| 1 | **Tipado fuerte y autocompletado** | Cada servicio expone métodos con nombres claros (`obtener_por_codigo`, `obtener_por_email`) en lugar de strings genéricos (`"persona"`, `"codigo"`). El IDE puede autocompletar y detectar errores antes de ejecutar. |
+| 2 | **Responsabilidad única** | Cada clase hace una sola cosa. `RepositorioPersonaPostgreSQL` solo sabe de personas en PostgreSQL. No hay una clase gigante que maneje las 12 tablas. |
+| 3 | **Cambiar de motor sin tocar lógica** | Para cambiar de PostgreSQL a MySQL solo se modifica `DB_PROVIDER=mysql` en el `.env`. Ni controllers ni servicios se enteran. |
+| 4 | **Lógica de negocio por entidad** | `ServicioUsuario` puede encriptar contraseñas, `ServicioFactura` podría validar stock en el futuro. Con un servicio genérico esto sería imposible sin ensuciar el código con `if tabla == "usuario"`. |
+| 5 | **Errores en tiempo de desarrollo** | Si alguien escribe `servicio.obtener_por_codgio()` (typo), Python falla inmediatamente. Con el genérico, `servicio.obtener_por_clave("persona", "codgio", valor)` pasaría sin error hasta que llegue el SQL a la BD. |
+| 6 | **Interfaces como contratos** | Se puede reemplazar cualquier repositorio por un mock en tests sin tocar nada más. La arquitectura es naturalmente testeable. |
+| 7 | **Escalabilidad independiente** | Si la tabla `factura` crece y necesita queries optimizadas, solo se modifica `RepositorioFacturaPostgreSQL` sin riesgo de romper las otras 11 entidades. |
+
+### Desventajas
+
+| # | Desventaja | Explicación |
+|---|-----------|-------------|
+| 1 | **Código repetitivo (boilerplate)** | 36 repositorios + 12 servicios + 24 interfaces = ~72 archivos casi idénticos. La mayoría solo cambia el nombre de la tabla y la clave primaria. |
+| 2 | **Agregar una tabla requiere ~8 archivos** | Modelo Pydantic, interfaz de repositorio, 3 repositorios (uno por motor), interfaz de servicio, servicio, controller, y actualizar la fábrica. Con el genérico bastaba con crear el modelo. |
+| 3 | **Las bases siguen siendo genéricas** | Los métodos protegidos `_obtener_filas`, `_crear`, etc. siguen recibiendo `nombre_tabla` como string. El SQL real sigue siendo dinámico. La especificidad es una capa sobre algo genérico internamente. |
+| 4 | **La fábrica crece linealmente** | `fabrica_repositorios.py` tiene ~350 líneas con 12 diccionarios y 12 funciones factory casi idénticas. Cada entidad nueva agrega ~20 líneas. |
+| 5 | **Riesgo de inconsistencia** | Si se corrige un bug en `RepositorioPersonaPostgreSQL`, hay que recordar aplicar lo mismo en los de SQL Server y MySQL. Con 36 archivos es fácil olvidar uno. |
+| 6 | **Sobre-ingeniería para CRUD simple** | Para una API que solo hace SELECT/INSERT/UPDATE/DELETE sin lógica compleja, el servicio genérico era suficiente. La arquitectura específica brilla cuando hay reglas de negocio distintas por entidad. |
+
+### Conclusión
+
+La arquitectura específica es la **correcta a largo plazo** si el proyecto va a crecer con lógica de negocio diferente por entidad (validaciones de factura, permisos por rol, reglas de stock). El costo es el boilerplate inicial. Si el proyecto se queda como CRUD puro, el genérico era más pragmático.
+
+---
+
 ## Licencia
 
 Este proyecto es material educativo desarrollado como tutorial de FastAPI con arquitectura en capas y soporte multi-base de datos.
